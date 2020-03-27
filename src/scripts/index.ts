@@ -1,14 +1,17 @@
-init()
-
-// functions
-async function init() {
-  const sample = 'images/sample1.png'
+const sample = 'images/sample1.png'
+const uploadButton = document.querySelector('input#upload')
+uploadButton.addEventListener('change', loadFile)
+loadImage(sample).then(main)
+// FUNCTIONS
+function main(image: HTMLImageElement, downloadName = 'fonto.jpg') {
   const text = 'Hello World is the long text'
-
+  const config = {
+    fontSize: 20,
+    marginRight: 7,
+    marginBottom: 7,
+  }
   const canvas = document.createElement('canvas')
-  const container = document.body
-  const image = await loadImage(sample)
-  const config = getDefaultConfig(image.width * image.height)
+  const container = document.querySelector('.canvas-container')
   const size = setCanvasSize(image, canvas)
   const textData = processText(text, size, config)
   const imgData = processImage(Float32Array.from(textData.data), image, size)
@@ -16,7 +19,27 @@ async function init() {
   const ctx = canvas.getContext('2d')
   ctx.putImageData(imgData, 0, 0)
 
+  // set download link
+  const downloadButton = document.querySelector(
+    'a#download-button',
+  ) as HTMLAnchorElement
+  downloadButton.download = downloadName
+  downloadButton.href = canvas.toDataURL()
+
+  // canvas clean-up
+  const oldCanvas = container.querySelector('canvas')
+  if (oldCanvas) container.removeChild(oldCanvas)
+
   container.appendChild(canvas)
+}
+function loadFile(event: HTMLInputEvent): void {
+  const file = event.target.files[0]
+  const reader = new FileReader()
+  reader.onloadend = async () => {
+    const image = await loadImage(reader.result as string)
+    main(image, `fonto_${file.name}`)
+  }
+  if (file) reader.readAsDataURL(file)
 }
 function loadImage(imgURL: string): Promise<HTMLImageElement> {
   return new Promise(resolve => {
@@ -24,17 +47,6 @@ function loadImage(imgURL: string): Promise<HTMLImageElement> {
     image.src = imgURL
     image.onload = () => resolve(image)
   })
-}
-function getDefaultConfig(resolution: number): Config {
-  console.log(resolution)
-  const fontSize = clamp(resolution / 5000, 15, 30)
-  const marginRight = fontSize / 3
-  const marginBottom = fontSize / 3
-  return {
-    fontSize,
-    marginRight,
-    marginBottom,
-  }
 }
 function processText(text: string, size: Size, config: Config): ImageData {
   const canvas = document.createElement('canvas')
@@ -113,11 +125,6 @@ function setCanvasSize(
 
   return { width, height }
 }
-function clamp(num: number, min: number, max: number): number {
-  if (num < min) return min
-  else if (num > max) return max
-  return num
-}
 interface Size {
   width: number
   height: number
@@ -126,4 +133,7 @@ interface Config {
   fontSize: number
   marginRight: number
   marginBottom: number
+}
+interface HTMLInputEvent extends Event {
+  target: HTMLInputElement & EventTarget
 }

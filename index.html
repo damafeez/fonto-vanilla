@@ -12,9 +12,35 @@
         margin: 0;
         position: absolute;
         width: 100%;
-        height: 100%;
+        display: flex;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      .canvas-container {
+        max-width: 1000px;
+      }
+      input#upload,
+      button,
+      .btn {
+        margin: 20px;
+        width: 200px;
+        height: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      a.btn {
+        color: currentColor;
+        text-decoration: none;
+        background-color: gray;
+        color: white;
       }
     </style>
   </head>
-  <body></body>
+  <body>
+    <main class="canvas-container"></main>
+    <aside>
+      <input id="upload" type="file" accept=".png, .jpg, .jpeg" />
+      <a href="#" id="download-button" class="btn">Download</a>
+    </aside>
+  </body>
 </html>
