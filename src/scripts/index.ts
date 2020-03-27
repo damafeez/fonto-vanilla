@@ -1,19 +1,28 @@
-const sample = 'images/sample1.png'
+const sample = 'images/original.jpg'
+const config = {
+  text: 'Hello World is the long text',
+  fontSize: 20,
+  marginRight: 7,
+  marginBottom: 7,
+  downloadName: 'fonto.jpg',
+  width: 1500,
+}
+let image: HTMLImageElement
 const uploadButton = document.querySelector('input#upload')
 uploadButton.addEventListener('change', loadFile)
-loadImage(sample).then(main)
+loadImage(sample).then(img => {
+  image = img
+  config.downloadName = 'fonto.jpg'
+  main(config)
+})
+
 // FUNCTIONS
-function main(image: HTMLImageElement, downloadName = 'fonto.jpg') {
-  const text = 'Hello World is the long text'
-  const config = {
-    fontSize: 20,
-    marginRight: 7,
-    marginBottom: 7,
-  }
+function main(config: Config) {
+  if (!image) return
   const canvas = document.createElement('canvas')
   const container = document.querySelector('.canvas-container')
-  const size = setCanvasSize(image, canvas)
-  const textData = processText(text, size, config)
+  const size = setCanvasSize(image, canvas, config.width)
+  const textData = processText(config.text, size, config)
   const imgData = processImage(Float32Array.from(textData.data), image, size)
 
   const ctx = canvas.getContext('2d')
@@ -23,7 +32,7 @@ function main(image: HTMLImageElement, downloadName = 'fonto.jpg') {
   const downloadButton = document.querySelector(
     'a#download-button',
   ) as HTMLAnchorElement
-  downloadButton.download = downloadName
+  downloadButton.download = config.downloadName
   downloadButton.href = canvas.toDataURL()
 
   // canvas clean-up
@@ -36,8 +45,9 @@ function loadFile(event: HTMLInputEvent): void {
   const file = event.target.files[0]
   const reader = new FileReader()
   reader.onloadend = async () => {
-    const image = await loadImage(reader.result as string)
-    main(image, `fonto_${file.name}`)
+    image = await loadImage(reader.result as string)
+    config.downloadName = `fonto_${file.name}`
+    main(config)
   }
   if (file) reader.readAsDataURL(file)
 }
@@ -114,8 +124,8 @@ function processImage(
 function setCanvasSize(
   image: HTMLImageElement,
   canvas: HTMLCanvasElement,
+  width = 1500,
 ): Size {
-  const width = 1500
   const aspect = image.width / image.height
 
   const height = width / aspect
@@ -133,6 +143,9 @@ interface Config {
   fontSize: number
   marginRight: number
   marginBottom: number
+  text: string
+  downloadName: string
+  width: number
 }
 interface HTMLInputEvent extends Event {
   target: HTMLInputElement & EventTarget
