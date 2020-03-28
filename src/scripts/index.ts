@@ -32,8 +32,11 @@ function editImage(config: Config) {
   if (!image) return
   const canvas = document.createElement('canvas')
   const size = setCanvasSize(image, canvas, config.width)
-  let textData = processText(config.text, size, config)
-  let imgData = processImage(Float32Array.from(textData.data), image, size)
+  const textData = processText(config.text, size, config)
+  const imgData = processImage(Float32Array.from(textData.data), image, size)
+
+  const ctx = canvas.getContext('2d')
+  ctx.putImageData(imgData, 0, 0)
 
   // set download link
   const downloadButton = document.querySelector(
@@ -41,10 +44,6 @@ function editImage(config: Config) {
   ) as HTMLAnchorElement
   downloadButton.download = config.downloadName
   downloadButton.href = canvas.toDataURL()
-
-  const ctx = canvas.getContext('2d')
-
-  ctx.putImageData(imgData, 0, 0)
 
   removeNodes(container)
   container.appendChild(canvas)
@@ -72,7 +71,7 @@ function loadFile(event: HTMLInputEvent): void {
   const reader = new FileReader()
   reader.onloadend = async () => {
     config.image = await loadImage(reader.result as string)
-    config.downloadName = `fonto_${file.name}`
+    config.downloadName = generateName(file.name)
     editImage(config)
   }
   if (file) reader.readAsDataURL(file)
@@ -164,6 +163,11 @@ function setCanvasSize(
   canvas.height = height
 
   return { width, height }
+}
+function generateName(name: string): string {
+  const arr = name.split('.')
+  arr.pop()
+  return [...arr, '_fonto.jpg'].join('')
 }
 // utils
 function removeNodes(parent: Element): number {
