@@ -1,32 +1,39 @@
-const sample = 'images/original.jpg'
-const config = {
-  text: 'Hello World is the long text',
+const samples = [
+  'images/sample1.jpg',
+  'images/sample2.jpg',
+  'images/sample3.jpg',
+  'images/sample4.jpg',
+  'images/sample5.jpg',
+]
+const sample = randomFrom(samples)
+const config: Config = {
+  text: 'Please wash your hands',
   fontSize: 20,
-  marginRight: 7,
-  marginBottom: 7,
+  marginRight: 11,
+  marginBottom: 5,
   downloadName: 'fonto.jpg',
   width: 1500,
+  image: null,
+  container: document.querySelector('.canvas-container'),
 }
-let image: HTMLImageElement
 const uploadButton = document.querySelector('input#upload')
 uploadButton.addEventListener('change', loadFile)
+setupControls()
 loadImage(sample).then(img => {
-  image = img
+  config.image = img
   config.downloadName = 'fonto.jpg'
-  main(config)
+  editImage(config)
 })
+const container = document.querySelector('.canvas-container')
 
 // FUNCTIONS
-function main(config: Config) {
+function editImage(config: Config) {
+  const { image, container } = config
   if (!image) return
   const canvas = document.createElement('canvas')
-  const container = document.querySelector('.canvas-container')
   const size = setCanvasSize(image, canvas, config.width)
-  const textData = processText(config.text, size, config)
-  const imgData = processImage(Float32Array.from(textData.data), image, size)
-
-  const ctx = canvas.getContext('2d')
-  ctx.putImageData(imgData, 0, 0)
+  let textData = processText(config.text, size, config)
+  let imgData = processImage(Float32Array.from(textData.data), image, size)
 
   // set download link
   const downloadButton = document.querySelector(
@@ -35,19 +42,38 @@ function main(config: Config) {
   downloadButton.download = config.downloadName
   downloadButton.href = canvas.toDataURL()
 
-  // canvas clean-up
-  const oldCanvas = container.querySelector('canvas')
-  if (oldCanvas) container.removeChild(oldCanvas)
+  const ctx = canvas.getContext('2d')
 
+  ctx.putImageData(imgData, 0, 0)
+
+  removeNodes(container)
   container.appendChild(canvas)
+}
+function setupControls() {
+  const controls = document.querySelectorAll(
+    '.controls input, .controls textarea',
+  ) as NodeListOf<HTMLInputElement>
+  controls.forEach(control => {
+    if (!(control.name in config)) return
+    control.value = (config as any)[control.name]
+    control.addEventListener('change', e => {
+      const target = e.target as HTMLInputElement
+      const value =
+        target.type === 'number' || target.type === 'range'
+          ? Number(target.value)
+          : target.value
+      ;(config as any)[target.name] = value
+      editImage(config)
+    })
+  })
 }
 function loadFile(event: HTMLInputEvent): void {
   const file = event.target.files[0]
   const reader = new FileReader()
   reader.onloadend = async () => {
-    image = await loadImage(reader.result as string)
+    config.image = await loadImage(reader.result as string)
     config.downloadName = `fonto_${file.name}`
-    main(config)
+    editImage(config)
   }
   if (file) reader.readAsDataURL(file)
 }
@@ -101,11 +127,11 @@ function processImage(
 
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
   const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-
+  const { data } = imgData
   for (let i = 0; i < imgData.data.length; i += 4) {
-    const r = imgData.data[i + 0]
-    const g = imgData.data[i + 1]
-    const b = imgData.data[i + 2]
+    const r = data[i + 0]
+    const g = data[i + 1]
+    const b = data[i + 2]
     const gray = 0.2 * r + 0.72 * g + 0.07 * b
     if (
       (textData[i + 0] === 0 &&
@@ -113,9 +139,13 @@ function processImage(
         textData[i + 2] === 0) ||
       gray < 20
     ) {
-      imgData.data[i + 0] = imgData.data[i + 1] = imgData.data[i + 2] = 0
+      data[i + 0] = 0
+      data[i + 1] = 0
+      data[i + 2] = 0
     } else {
-      imgData.data[i + 0] = imgData.data[i + 1] = imgData.data[i + 2] = gray
+      data[i + 0] = gray
+      data[i + 1] = gray
+      data[i + 2] = gray
     }
   }
 
@@ -135,6 +165,18 @@ function setCanvasSize(
 
   return { width, height }
 }
+// utils
+function removeNodes(parent: Element): number {
+  const count = parent.children.length
+  Array.from(parent.children).forEach(child => {
+    parent.removeChild(child)
+  })
+  return count
+}
+function randomFrom<T>(array: T[]): T {
+  const random = Math.floor(Math.random() * array.length)
+  return array[random]
+}
 interface Size {
   width: number
   height: number
@@ -146,6 +188,8 @@ interface Config {
   text: string
   downloadName: string
   width: number
+  image: HTMLImageElement
+  container: Element
 }
 interface HTMLInputEvent extends Event {
   target: HTMLInputElement & EventTarget
